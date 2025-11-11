@@ -14,6 +14,7 @@ import OrganizerDashboard from "./pages/OrganizerDashboard";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -36,16 +37,86 @@ const App = () => (
       <BrowserRouter>
         <ScrollToTop />
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/events" element={<Events />} />
-          <Route path="/events/:id" element={<EventDetails />} />
-          <Route path="/community" element={<Community />} />
+          {/* ✅ Public Routes */}
           <Route path="/login" element={<Login />} />
-          <Route path="/student-dashboard" element={<StudentDashboard />} />
-          <Route path="/organizer-dashboard" element={<OrganizerDashboard />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/settings" element={<Settings />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          
+          {/* ✅ Protected Routes - Authenticated Users Only */}
+          <Route 
+            path="/" 
+            element={
+              <ProtectedRoute>
+                <Home />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/events" 
+            element={
+              <ProtectedRoute>
+                <Events />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/events/:id" 
+            element={
+              <ProtectedRoute>
+                <EventDetails />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/community" 
+            element={
+              <ProtectedRoute>
+                <Community />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* ✅ Student-Only Dashboard */}
+          <Route 
+            path="/student-dashboard" 
+            element={
+              <ProtectedRoute requiredRole="student">
+                <StudentDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* ✅ Event Manager-Only Dashboard */}
+          <Route 
+            path="/organizer-dashboard" 
+            element={
+              <ProtectedRoute requiredRole="event_manager">
+                <OrganizerDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* ✅ Profile & Settings - All Authenticated Users */}
+          <Route 
+            path="/profile" 
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/settings" 
+            element={
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* ✅ 404 - Catch All */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

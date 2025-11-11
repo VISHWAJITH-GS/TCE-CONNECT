@@ -4,28 +4,85 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, Mail, Lock, LogIn } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, LogIn, AlertCircle, User, Calendar } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { post, setAuthData, type LoginResponse } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("student");
+  const [role, setRole] = useState<"student" | "event_manager">("student");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError("");
 
-    // Simulate login
-    setTimeout(() => {
-      localStorage.setItem("tce_isAuthenticated", "true");
-      localStorage.setItem("tce_user_email", email);
-      localStorage.setItem("tce_user_role", role);
+    try {
+      // ✅ Call the real backend API
+      const response = await post<LoginResponse>("/auth/login", {
+        email,
+        password,
+      });
+
+      // ✅ Validate response
+      if (!response.success || !response.token || !response.user) {
+        throw new Error("Invalid response from server");
+      }
+
+      // ✅ Check if the logged-in role matches the selected role
+      if (response.user.role !== role) {
+        setError(
+          `This account is registered as ${
+            response.user.role === "student" ? "Student" : "Event Organizer"
+          }. Please select the correct role.`
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      // ✅ Store auth data in localStorage
+      setAuthData(response.token, response.user);
+
+      // ✅ Show success toast
+      toast({
+        title: "Login Successful",
+        description: `Welcome back, ${response.user.full_name || response.user.email}!`,
+      });
+
+      // ✅ IMPORTANT: Redirect based on role
+      if (response.user.role === "student") {
+        // Student → Home page
+        navigate("/", { replace: true });
+      } else if (response.user.role === "event_manager") {
+        // Event Manager → Organizer Dashboard
+        navigate("/organizer-dashboard", { replace: true });
+      } else {
+        // Fallback
+        navigate("/", { replace: true });
+      }
+    } catch (err: any) {
+      const errorMessage = 
+        err.response?.data?.message || 
+        err.message || 
+        "Login failed. Please check your credentials.";
+      
+      setError(errorMessage);
+      
+      toast({
+        variant: "destructive",
+        title: "Login Failed",
+        description: errorMessage,
+      });
+    } finally {
       setIsLoading(false);
-      navigate(role === "student" ? "/student-dashboard" : "/organizer-dashboard");
-    }, 1500);
+    }
   };
 
   return (
@@ -66,6 +123,45 @@ export default function Login() {
             </div>
 
             <form onSubmit={handleLogin} className="space-y-4 sm:space-y-5">
+              {/* Error Alert */}
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              {/* Role Selection */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Login as</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setRole("student")}
+                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all duration-200 ${
+                      role === "student"
+                        ? "border-primary bg-primary/10 text-primary font-semibold"
+                        : "border-border hover:border-primary/50 text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <User className="h-4 w-4" />
+                    <span className="text-sm">Student</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRole("event_manager")}
+                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all duration-200 ${
+                      role === "event_manager"
+                        ? "border-primary bg-primary/10 text-primary font-semibold"
+                        : "border-border hover:border-primary/50 text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Calendar className="h-4 w-4" />
+                    <span className="text-sm">Event Organizer</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Email Field */}
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium">
@@ -109,23 +205,6 @@ export default function Login() {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-              </div>
-
-              {/* Role Selection */}
-              <div className="space-y-2">
-                <Label htmlFor="role" className="text-sm font-medium">
-                  Select Role
-                </Label>
-                <select
-                  id="role"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="w-full h-11 border-border focus:border-primary transition-colors rounded-md px-3 text-sm text-muted-foreground"
-                  required
-                >
-                  <option value="student">Student</option>
-                  <option value="organizer">Event Organizer</option>
-                </select>
               </div>
 
               {/* Submit Button */}

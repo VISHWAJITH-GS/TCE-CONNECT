@@ -1,0 +1,303 @@
+TCE-Connect v2: Complete File-by-File Description
+Focus: Output, Artifact, and Application Control
+
+📦 Root Configuration Files
+package.json
+Output: NPM package manifest that defines the project identity, dependencies, and build commands.
+Controls: Project metadata (name: "tce-connect", description), 50+ runtime dependencies (React, Radix UI, Tailwind, etc.), 15+ dev dependencies (Vite, TypeScript, ESLint), and 4 npm scripts (dev, build, preview, lint) that power local development and production builds.
+
+vite.config.ts
+Output: Vite bundler configuration file.
+Controls: Development server setup (runs on localhost:8080 with IPv6), React SWC plugin for fast refresh, path aliases (@ → src), and conditional component tagging in dev mode.
+
+tailwind.config.ts
+Output: Tailwind CSS design system configuration.
+Controls: Color palette (primary maroon, accent gold matching TCE brand), dark mode support, custom font (Poppins), border radius variables, container settings, animation keyframes for accordions, and extension of Tailwind's default utilities with HSL-based color tokens.
+
+tsconfig.json / tsconfig.app.json / tsconfig.node.json
+Output: TypeScript compiler configuration files.
+Controls:
+
+Root: Path aliases for @/* imports, disables strict type checking for rapid prototyping.
+App: ES2020 target, JSX transform for React, module resolution for Vite bundler.
+Node: Config for Vite itself (not app code), strict mode enabled.
+postcss.config.js
+Output: PostCSS configuration for CSS processing.
+Controls: Enables Tailwind CSS and Autoprefixer plugins that transform utility classes into browser-compatible CSS during build.
+
+eslint.config.js
+Output: ESLint linting rules for code quality.
+Controls: TypeScript ESLint rules, React Hooks plugin, React Refresh warnings, ignores dist folder, disables unused variables warning for faster iteration.
+
+components.json
+Output: shadcn/ui CLI configuration.
+Controls: Component installation settings (style: default, TypeScript: yes, Tailwind CSS variables: yes), import aliases for @/components, @/lib/utils, and base color scheme (slate).
+
+index.html
+Output: The single HTML entry point served to the browser.
+Controls: Page metadata (title: "TCE Connect - Campus Events & Community Hub", description, keywords), SEO tags, Open Graph meta for social sharing, Poppins font preload, favicon and logo references, and <div id="root"> mount point for React. This is what users see as the initial HTML shell.
+
+📂 Public Assets
+robots.txt
+Output: Search engine crawler instructions.
+Controls: Allows all major bots (Googlebot, Bingbot, Twitterbot, Facebook) to index all pages, improving SEO discoverability.
+
+tce-logo.png (expected but not yet added)
+Output: TCE official logo image file.
+Controls: Branding across Navbar (40×40px), Footer (48×48px), and browser favicon. Missing file triggers graceful fallback to text-only branding.
+
+🎨 Global Styles
+index.css
+Output: Global stylesheet compiled into the final CSS bundle.
+Controls:
+
+Design tokens: TCE maroon (--primary: 0 65% 35%) and gold (--accent: 45 100% 50%) theme colors for light/dark modes.
+Base styles: Poppins font family, smooth scroll behavior, body typography (14px base).
+Utility classes: Custom animations (fadeIn, slideUp, scaleIn, pageTransition), button hover effects with ripple/shine, gradient text, glass effect backdrop, scrollbar hiding, and maroon-tinted shadows.
+Result: Every page has consistent TCE branding, smooth transitions, and polished micro-interactions.
+⚙️ Application Bootstrap
+main.tsx
+Output: JavaScript entry point that mounts the React app.
+Controls: Imports index.css, creates root React element, renders <App /> into #root div. This is the bridge from static HTML to dynamic React SPA.
+
+App.tsx
+Output: Root React component wrapping the entire application.
+Controls:
+
+Providers: React Query client (data fetching), Tooltip provider, two toast systems (shadcn + Sonner).
+Routing: BrowserRouter with 10 routes (/, /events, /events/:id, /community, /login, /student-dashboard, /organizer-dashboard, /profile, /settings, /404).
+Scroll behavior: Auto-scroll to top on route change.
+Result: Entire SPA structure, navigation flow, and global UI context.
+🔧 Utilities & Hooks
+utils.ts
+Output: Utility function for conditional CSS class merging.
+Controls: cn() function that combines clsx (conditional classes) + tailwind-merge (deduplicates Tailwind classes), used in every component to dynamically apply styles.
+
+use-mobile.tsx
+Output: React hook detecting mobile viewport.
+Controls: Returns true if screen width < 768px, listens to window resize via matchMedia. Used to toggle mobile bottom nav vs desktop top nav.
+
+use-toast.ts
+Output: Toast notification state management.
+Controls: Global toast queue with add/update/dismiss actions, limits to 1 visible toast, auto-removal after 1000 seconds. Powers all success/error notifications across the app.
+
+vite-env.d.ts
+Output: TypeScript definitions for Vite environment.
+Controls: Enables import of Vite-specific features (e.g., import.meta.env) without TypeScript errors.
+
+🧩 Reusable Components
+Navbar.tsx
+Output: Top navigation bar visible on every page.
+Controls:
+
+Desktop: Logo + "TCE Connect" text, nav links (Home, Events, Clubs), Login button or Profile dropdown (with Dashboard, Profile, Settings, Logout).
+Mobile: Hamburger menu that slides down with same links + auth options.
+Auth state: Reads localStorage to show/hide profile menu, updates on login/logout.
+Result: Primary navigation UI, authentication status indicator.
+Footer.tsx
+Output: Site footer on every page.
+Controls: 4-column grid with TCE logo/about, quick links (Home, Events, Clubs, TCE website), contact info (address, phone, email), social media icons (Facebook, Instagram, LinkedIn, Twitter, YouTube), copyright notice, and "Developed by CSE Department" credit.
+
+BottomNav.tsx
+Output: Fixed bottom navigation bar for mobile (< 768px).
+Controls: 3 icon buttons (Home, Events, Clubs) with active state highlighting, glass effect background. Hidden on desktop. Enables thumb-friendly mobile navigation.
+
+EventCard.tsx
+Output: Reusable card component displaying a single event.
+Controls:
+
+Two modes: Vertical card (grid view) or horizontal card (carousel).
+Content: Event title, date (with Calendar icon), venue (with MapPin icon), department badge, type badge (Technical/Cultural/Sports with color coding).
+Action: "View Details" button navigates to /events/:id.
+Hover: Scale-up animation, shadow elevation.
+Result: Consistent event presentation across Home, Events, Dashboard pages.
+ClubCard.tsx
+Output: Reusable card component displaying a single club.
+Controls:
+
+Content: Club icon (mapped from Lucide icons), name, description (truncated to 3 lines), "Visit Portal" button.
+Action: Opens external link to clubs.tceapps.in in new tab.
+Hover: Scale-up, icon animation, border color change.
+Result: Uniform club cards on Community page linking to TCE's official club portal.
+LoadingSpinner.tsx
+Output: Animated loading indicator.
+Controls: SVG spinner with rotating stroke, customizable size prop. Used during async operations (login, data fetching).
+
+NavLink.tsx
+Output: React Router link wrapper with active state styling.
+Controls: Extends react-router-dom's NavLink to apply custom CSS classes when route is active or pending, using cn() utility. Powers styled navigation links in Navbar and BottomNav.
+
+ProtectedRoute.tsx
+Output: Route guard component (currently placeholder).
+Controls: Checks localStorage.getItem('tce_isAuthenticated'), redirects to /login if false. Can be used to wrap protected routes like /student-dashboard.
+
+🎨 UI Component Library (shadcn/ui)
+Location: ui
+Pattern: Pre-built, accessible components built on Radix UI primitives + Tailwind CSS.
+Controls: Each file exports a React component with variant props and forwarded refs.
+
+Key Examples:
+button.tsx: Configurable button with 6 variants (default, destructive, outline, secondary, ghost, link) and 4 sizes (default, sm, lg, icon). Used in every interactive element.
+
+card.tsx: Container with optional Header, Title, Description, Content, Footer sections. Used for EventCard, ClubCard, Dashboard stats.
+
+input.tsx: Styled text input with focus ring, disabled state, file upload styling. Used in Login, Settings, Event creation forms.
+
+badge.tsx: Small label component for event categories (Technical/Cultural/Sports).
+
+dropdown-menu.tsx: Radix UI dropdown with trigger, content, items. Powers Profile menu in Navbar.
+
+dialog.tsx: Modal overlay for confirmation dialogs, forms.
+
+toast.tsx / toaster.tsx / sonner.tsx: Notification system for success/error messages.
+
+tabs.tsx, accordion.tsx, select.tsx, textarea.tsx: Form and content organization components.
+
+tooltip.tsx: Hover info popups.
+
+sidebar.tsx, sheet.tsx, drawer.tsx: Layout and navigation components.
+
+Output of entire /ui folder: A cohesive, accessible design system that produces consistent buttons, forms, cards, menus, and overlays across the entire application.
+
+📄 Page Components (Routes)
+Home.tsx
+Output: Landing page at /.
+Controls:
+
+Hero section: Animated heading "Discover Campus Events", subtitle "Connect. Learn. Grow.", CTA buttons (Explore Events, Browse Clubs), 3 feature highlights (Live Events, Active Clubs, Competitions).
+Today's Events: 3 event cards in grid (AI Sprint, Music Jam, Football Match).
+Upcoming Events: 3 event cards (AR/VR Visit, IoT Workshop, Cultural Night).
+Layout: Navbar + Hero + Events + BottomNav + Footer.
+Result: First impression, conversion to explore events/clubs.
+Events.tsx
+Output: Events listing page at /events.
+Controls:
+
+Header: Title "TCE Events", search bar (filters by title/department), filter chips (All, Technical, Cultural, Sports).
+Event grid: 22 event cards in responsive 3-column grid, staggered animations.
+Empty state: "No events found" with SearchX icon if filters return nothing.
+Result: Main event discovery interface, filterable catalog of all campus events.
+EventDetails.tsx
+Output: Single event page at /events/:id.
+Controls:
+
+Hero image: Full-width event photo with gradient overlay, category badge, title.
+Event info card: Date (formatted), time, venue, participant count (registered/max with progress bar).
+About section: Full description.
+Highlights: Bulleted list with CheckCircle icons.
+Requirements: Bulleted list.
+Register button: Toggles registration state in localStorage, shows "Registered" or "Register Now", redirects to /login if unauthenticated.
+Sidebar actions: Share (native share API), Save bookmark.
+Result: Detailed event page with registration CTA, drives event sign-ups.
+Community.tsx
+Output: Clubs directory page at /community.
+Controls:
+
+Header: Title "TCE Clubs", subtitle about innovation/culture/community.
+Info banner: 3 pillars (Tech & Innovation, Arts & Culture, Community Impact).
+Club grid: 12 club cards (AI Consortium, Algo Geeks, AR/VR, App Dev, IoT, Music, Dance, Art, Book Readers, Anglophile, Cinemates, Ascenders).
+Result: Central hub for club discovery, drives traffic to TCE Club Portal.
+Login.tsx
+Output: Authentication page at /login.
+Controls:
+
+Form: Email input, password input (with show/hide toggle), role dropdown (Student/Organizer).
+Submit: Simulates login (1.5s delay), stores auth state in localStorage, redirects to /student-dashboard or /organizer-dashboard based on role.
+Logo: TCE logo + "Welcome to TCE Connect" heading.
+Result: Entry point for authentication, gates access to dashboards.
+StudentDashboard.tsx
+Output: Student dashboard at /student-dashboard.
+Controls:
+
+Stats cards: Registered Events (5), Clubs Joined (3), Events Attended (12).
+Quick actions: "Browse Events" and "Explore Clubs" buttons.
+Upcoming events: Placeholder ("No registered events yet") with CTA to /events.
+Result: Personalized student hub, tracks engagement metrics.
+OrganizerDashboard.tsx
+Output: Organizer dashboard at /organizer-dashboard.
+Controls:
+
+Stats cards: Active Events (2), Total Registrations (123), Past Events (8), Success Rate (95%).
+Create event form: Title, date, description, capacity inputs with submit/cancel buttons.
+Event management table: List of organizer's events with Edit/Delete buttons.
+Empty state: "No Events Yet" with CTA to create first event.
+Result: Event management interface for club organizers, CRUD operations for events.
+Profile.tsx
+Output: User profile page at /profile.
+Controls:
+
+Header: User avatar (emoji), name "Rajesh Kumar", department/year info.
+Registered events: Cards for AI Sprint, AR/VR Visit, IoT Workshop with "View Details" links.
+My clubs: Cards for AI Consortium, App Dev Club with "Open" buttons.
+Logout button: Clears localStorage and redirects to /.
+Result: Personal profile overview, quick access to user's events/clubs.
+Settings.tsx
+Output: Settings page at /settings.
+Controls:
+
+Account settings: Email (disabled), Full Name input, "Save Changes" button.
+Password change: Current/New/Confirm password inputs, "Update Password" button.
+Notifications: 3 toggle checkboxes (Email Notifications, Event Reminders, Club Updates).
+Result: User preference configuration, account management.
+NotFound.tsx
+Output: 404 error page at * (catch-all route).
+Controls: Displays "404 - Oops! Page not found", link to return home, logs error to console.
+Result: Graceful handling of invalid URLs.
+
+📚 Documentation Files
+README.md
+Output: Project documentation (GitHub front page).
+Controls: Project description, features list, tech stack, installation instructions, project structure, available scripts, Supabase setup links.
+Result: Onboarding guide for developers, setup instructions.
+
+PROJECT_OVERVIEW.md
+Output: Detailed project specification.
+Controls: Vision statement, user roles, feature breakdown, technical architecture, page functionality, routing table.
+Result: Blueprint for project requirements and design decisions.
+
+IMPLEMENTATION_CHECKLIST.md
+Output: Feature completion tracker.
+Controls: Checkboxes for every feature (22 events, 12 clubs, 10 pages, authentication, filtering, etc.) with status indicators.
+Result: Progress monitoring, ensures vision alignment.
+
+SUPABASE_INTEGRATION.md
+Output: Backend integration guide (for future).
+Controls: Instructions for connecting Supabase, API function documentation, authentication flow, database schema.
+Result: Roadmap for backend integration (currently using localStorage mock).
+
+LOGO_SETUP.md
+Output: Logo installation instructions.
+Controls: Steps to add tce-logo.png to public, fallback behavior, size specs.
+Result: Branding setup guide.
+
+🎯 Final Output Summary
+What This Project Produces:
+
+A Single-Page Application (SPA) served at http://localhost:8080 (dev) or a static bundle in /dist (production).
+
+10 Interactive Pages:
+
+Home (hero + events preview)
+Events (filterable catalog)
+Event Details (registration page)
+Community (clubs directory)
+Login (auth gate)
+Student Dashboard (user stats)
+Organizer Dashboard (event management)
+Profile (user overview)
+Settings (preferences)
+404 (error page)
+Key User Flows:
+
+Student: Browse events → View details → Register → See in dashboard
+Organizer: Login → Create event → Manage registrations → Track analytics
+Guest: Explore events/clubs → Click login → Redirected to auth
+22 Events across 3 categories (Technical, Cultural, Sports) with full details.
+
+12 Clubs linking to TCE's official club portal.
+
+Responsive UI adapting to mobile (bottom nav) and desktop (top nav).
+
+TCE Branding with maroon/gold theme, Poppins font, smooth animations.
+
+Every file contributes to this cohesive application where students discover, register for, and track campus events while organizers manage them—all under the TCE Connect brand.

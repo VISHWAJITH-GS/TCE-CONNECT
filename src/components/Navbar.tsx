@@ -1,7 +1,7 @@
 import { Home, Calendar, MessageCircle, Menu, X, User, LogOut, Settings, LayoutDashboard } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { get, isAuthenticated, logout as apiLogout, getUserRole, type Profile } from "@/lib/api";
 
 const navItems = [
   { icon: Home, label: "Home", path: "/" },
@@ -20,34 +21,56 @@ const navItems = [
 
 export const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userEmail, setUserEmail] = useState("");
-  const [userRole, setUserRole] = useState("");
+  const [authenticated, setAuthenticated] = useState(false);
+  const [userProfile, setUserProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
+  // Fetch user profile when authenticated
   useEffect(() => {
-    const authStatus = localStorage.getItem("tce_isAuthenticated");
-    const email = localStorage.getItem("tce_user_email");
-    const role = localStorage.getItem("tce_user_role");
-    setIsAuthenticated(authStatus === "true");
-    setUserEmail(email || "");
-    setUserRole(role || "");
-  }, []);
+    const checkAuth = async () => {
+      const token = localStorage.getItem("tce_token");
+      const authStatus = !!token;
+      setAuthenticated(authStatus);
+      
+      if (authStatus) {
+        try {
+          const profile = await get<Profile>("/profile");
+          setUserProfile(profile);
+        } catch (error) {
+          console.error("Failed to fetch profile:", error);
+          // If profile fetch fails, don't auto-logout (token might still be valid)
+        }
+      }
+      setLoading(false);
+    };
+
+    checkAuth();
+  }, [location.pathname]); // Re-check on route change
 
   const handleLogout = () => {
-    localStorage.removeItem("tce_isAuthenticated");
-    localStorage.removeItem("tce_user_email");
-    localStorage.removeItem("tce_user_role");
-    setIsAuthenticated(false);
+    // ✅ Clear all localStorage data
+    localStorage.removeItem("tce_token");
+    localStorage.removeItem("tce_role");
+    localStorage.removeItem("tce_user_id");
+    localStorage.removeItem("tce_user");
+    
+    // ✅ Update state
+    setAuthenticated(false);
+    setUserProfile(null);
     setMobileMenuOpen(false);
-    navigate("/login");
+    
+    // ✅ Redirect to login
+    navigate("/login", { replace: true });
   };
 
   const handleDashboard = () => {
     setMobileMenuOpen(false);
-    if (userRole === "student") {
+    const role = getUserRole();
+    if (role === "student") {
       navigate("/student-dashboard");
-    } else if (userRole === "organizer") {
+    } else if (role === "event_manager") {
       navigate("/organizer-dashboard");
     }
   };
@@ -89,7 +112,7 @@ export const Navbar = () => {
               </NavLink>
             ))}
             
-            {isAuthenticated ? (
+            {authenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -97,14 +120,17 @@ export const Navbar = () => {
                     className="ml-2 px-4 py-1.5 rounded-lg border-primary/30 hover:bg-primary/10 hover:border-primary transition-all duration-300 font-semibold text-sm"
                   >
                     <User className="h-4 w-4 mr-2" />
-                    Profile
+                    {loading ? "Loading..." : userProfile?.full_name || "Profile"}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium">{userEmail}</p>
-                      <p className="text-xs text-muted-foreground capitalize">{userRole}</p>
+                      <p className="text-sm font-medium">{userProfile?.full_name || "User"}</p>
+                      <p className="text-xs text-muted-foreground">{userProfile?.email}</p>
+                      <p className="text-xs text-muted-foreground capitalize">
+                        {userProfile?.role === "event_manager" ? "Event Organizer" : "Student"}
+                      </p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -168,11 +194,14 @@ export const Navbar = () => {
               </NavLink>
               ))}
             
-            {isAuthenticated ? (
+            {authenticated ? (
               <>
                 <div className="px-4 py-2 mx-2 text-sm border-t border-border mt-2">
-                  <p className="font-medium text-foreground">{userEmail}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{userRole}</p>
+                  <p className="font-medium text-foreground">{userProfile?.full_name || "User"}</p>
+                  <p className="text-xs text-muted-foreground">{userProfile?.email}</p>
+                  <p className="text-xs text-muted-foreground capitalize">
+                    {userProfile?.role === "event_manager" ? "Event Organizer" : "Student"}
+                  </p>
                 </div>
                 <button
                   onClick={handleDashboard}

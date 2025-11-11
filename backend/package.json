@@ -1,0 +1,41 @@
+{
+  "name": "tce-connect-backend",
+  "version": "1.0.0",
+  "description": "Backend API server for TCE-Connect - Event management platform for Thiagarajar College of Engineering",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "tce",
+    "event-management",
+    "nodejs",
+    "express",
+    "supabase",
+    "api"
+  ],
+  "author": "TCE Connect Team",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.81.0",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.1.5",
+    "express-validator": "^7.0.1",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "type": "module"
+}
