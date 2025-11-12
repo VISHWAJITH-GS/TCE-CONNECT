@@ -48,10 +48,6 @@ Built with modern web technologies for a responsive and intuitive user experienc
 - **Supabase Auth** - Authentication and user management
 - **Row Level Security** - Database-level access control
 
-## Project info
-
-**Repository**: tce-connect-v2  
-**Owner**: Yaswanth876
 
 ## Getting Started
 
