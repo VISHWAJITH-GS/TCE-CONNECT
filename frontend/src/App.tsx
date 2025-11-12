@@ -9,6 +9,7 @@ import Events from "./pages/Events";
 import EventDetails from "./pages/EventDetails";
 import Community from "./pages/Community";
 import Login from "./pages/Login";
+import SignUp from "./pages/SignUp";
 import StudentDashboard from "./pages/StudentDashboard";
 import OrganizerDashboard from "./pages/OrganizerDashboard";
 import Profile from "./pages/Profile";
@@ -44,6 +45,7 @@ const App = () => (
         <Routes>
           {/* ✅ Public Routes */}
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<SignUp />} />
           
           {/* ✅ Protected Routes - Authenticated Users Only */}
           <Route 

@@ -225,6 +225,14 @@ export default function Login() {
                   </span>
                 )}
               </Button>
+
+              {/* Create Account Link */}
+              <div className="text-center text-sm text-muted-foreground pt-2">
+                Don't have an account?{" "}
+                <a href="/signup" className="text-primary hover:underline font-semibold">
+                  Create Account
+                </a>
+              </div>
             </form>
           </div>
         </Card>
