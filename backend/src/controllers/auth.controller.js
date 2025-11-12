@@ -59,7 +59,62 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    // ✅ Step 2: Create user in Supabase Auth using admin API
+    // ✅ Step 2: Check if user already exists in profiles table first
+    console.log('Checking if email already exists in profiles...');
+    const { data: existingProfile, error: checkError } = await supabaseAdmin
+      .from('profiles')
+      .select('user_id, email')
+      .eq('email', email)
+      .maybeSingle();
+
+    console.log('Email check result:', { 
+      exists: !!existingProfile, 
+      profile: existingProfile,
+      error: checkError 
+    });
+
+    if (existingProfile) {
+      console.log('❌ Email already registered in profiles:', email);
+      return res.status(400).json({
+        success: false,
+        message: "Email already registered. Please login or use a different email."
+      });
+    }
+
+    console.log('✅ Email not found in profiles, proceeding...');
+
+    // ✅ Step 2.5: Check if user exists in Supabase Auth
+    console.log('Checking if email already exists in Supabase Auth...');
+    const { data: authUsers, error: authCheckError } = await supabaseAdmin.auth.admin.listUsers();
+    
+    if (authUsers && authUsers.users) {
+      const existingAuthUser = authUsers.users.find(u => u.email === email);
+      if (existingAuthUser) {
+        console.log('❌ Email already exists in Supabase Auth:', email);
+        console.log('Orphaned auth user found, user_id:', existingAuthUser.id);
+        
+        // Check if this is an orphaned user (auth exists but no profile)
+        const { data: orphanProfile } = await supabaseAdmin
+          .from('profiles')
+          .select('user_id')
+          .eq('user_id', existingAuthUser.id)
+          .maybeSingle();
+        
+        if (!orphanProfile) {
+          console.log('🧹 Cleaning up orphaned auth user:', existingAuthUser.id);
+          // Delete the orphaned auth user so we can recreate it properly
+          await supabaseAdmin.auth.admin.deleteUser(existingAuthUser.id);
+          console.log('✅ Orphaned auth user deleted, will proceed with registration');
+        } else {
+          return res.status(400).json({
+            success: false,
+            message: "Email already registered. Please login or use a different email."
+          });
+        }
+      }
+    }
+
+    // ✅ Step 3: Create user in Supabase Auth using admin API
     console.log('Creating user in Supabase Auth...');
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -75,10 +130,10 @@ export const registerUser = async (req, res) => {
     if (authError) {
       console.error('❌ Supabase Auth Error:', authError);
       // Handle specific Supabase auth errors
-      if (authError.message.includes('already registered')) {
+      if (authError.message.includes('already registered') || authError.message.includes('User already registered')) {
         return res.status(400).json({
           success: false,
-          message: "Email already registered"
+          message: "Email already registered. Please login or use a different email."
         });
       }
       return res.status(400).json({
@@ -91,7 +146,35 @@ export const registerUser = async (req, res) => {
     const userId = authData.user.id;
     console.log('✅ User created with ID:', userId);
 
-    // ✅ Step 3: Insert profile row in profiles table
+    // ✅ Step 4: Check if profile already exists with this user_id (race condition check)
+    console.log('Checking if profile already exists for user_id:', userId);
+    const { data: existingUserProfile, error: userProfileCheckError } = await supabaseAdmin
+      .from('profiles')
+      .select('user_id, email')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    console.log('Profile check result:', { 
+      exists: !!existingUserProfile, 
+      profile: existingUserProfile,
+      error: userProfileCheckError 
+    });
+
+    if (existingUserProfile) {
+      console.log('❌ Profile already exists for this user_id:', userId);
+      console.log('Existing profile email:', existingUserProfile.email);
+      console.log('This is likely from a previous failed attempt. Deleting the newly created auth user:', userId);
+      await supabaseAdmin.auth.admin.deleteUser(userId);
+      return res.status(400).json({
+        success: false,
+        message: "An account with this email already exists. Please login or contact support if you're having issues."
+      });
+    }
+
+    console.log('✅ No existing profile found, proceeding with profile creation');
+
+    // ✅ Step 5: Insert profile row in profiles table
+    console.log('Creating profile in database...');
     const { data: profileData, error: profileError } = await supabaseAdmin
       .from('profiles')
       .insert({
@@ -109,8 +192,16 @@ export const registerUser = async (req, res) => {
 
     if (profileError) {
       // ✅ Rollback: Delete the auth user if profile creation fails to avoid ghost accounts
-      console.error('Profile creation failed, rolling back user:', profileError);
+      console.error('❌ Profile creation failed, rolling back user:', profileError);
       await supabaseAdmin.auth.admin.deleteUser(userId);
+      
+      // Check if it's a duplicate key error
+      if (profileError.code === '23505') {
+        return res.status(400).json({
+          success: false,
+          message: "Email already registered. Please login or use a different email."
+        });
+      }
       
       return res.status(500).json({
         success: false,
@@ -119,7 +210,11 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    // ✅ Step 4: Generate JWT token (same as login)
+    console.log('✅ Profile created successfully');
+
+    console.log('✅ Profile created successfully');
+
+    // ✅ Step 6: Generate JWT token (same as login)
     const token = jwt.sign(
       {
         user_id: userId,
@@ -130,7 +225,8 @@ export const registerUser = async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    // ✅ Step 5: Return success response
+    // ✅ Step 7: Return success response
+    console.log('✅ Registration complete for:', email);
     return res.status(201).json({
       success: true,
       message: "Account created successfully",
