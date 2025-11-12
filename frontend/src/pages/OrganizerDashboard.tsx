@@ -19,6 +19,11 @@ export default function OrganizerDashboard() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [stats, setStats] = useState({
+    activeEvents: 0,
+    totalRegistrations: 0,
+    pastEvents: 0
+  });
 
   // Form state
   const [formData, setFormData] = useState({
@@ -41,6 +46,36 @@ export default function OrganizerDashboard() {
   useEffect(() => {
     fetchEvents();
   }, []);
+
+  // Calculate stats whenever events change
+  useEffect(() => {
+    calculateStats();
+  }, [events]);
+
+  const calculateStats = () => {
+    const now = new Date();
+    
+    let activeCount = 0;
+    let pastCount = 0;
+    let totalRegs = 0;
+
+    events.forEach(event => {
+      const eventDate = new Date(event.date_time);
+      if (eventDate > now) {
+        activeCount++;
+      } else {
+        pastCount++;
+      }
+      // Add registration count if available
+      totalRegs += event.registered_count || 0;
+    });
+
+    setStats({
+      activeEvents: activeCount,
+      totalRegistrations: totalRegs,
+      pastEvents: pastCount
+    });
+  };
 
   const fetchEvents = async () => {
     try {
@@ -167,53 +202,39 @@ export default function OrganizerDashboard() {
         {/* Dashboard Content */}
         <div className="max-w-6xl mx-auto px-4 lg:px-6 py-6 space-y-6">
           {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="p-6 hover:shadow-lg transition-shadow">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="p-6 hover:shadow-lg transition-shadow animate-scale-in">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Calendar className="h-6 w-6 text-primary" />
+                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                  <Calendar className="h-6 w-6 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{events.length}</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.activeEvents}</p>
                   <p className="text-sm text-muted-foreground">Active Events</p>
                 </div>
               </div>
             </Card>
 
-            <Card className="p-6 hover:shadow-lg transition-shadow">
+            <Card className="p-6 hover:shadow-lg transition-shadow animate-scale-in" style={{ animationDelay: '0.1s' }}>
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Users className="h-6 w-6 text-primary" />
+                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                  <Users className="h-6 w-6 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">
-                    {events.reduce((sum, event) => sum + event.registrations, 0)}
-                  </p>
+                  <p className="text-2xl font-bold text-foreground">{stats.totalRegistrations}</p>
                   <p className="text-sm text-muted-foreground">Total Registrations</p>
                 </div>
               </div>
             </Card>
 
-            <Card className="p-6 hover:shadow-lg transition-shadow">
+            <Card className="p-6 hover:shadow-lg transition-shadow animate-scale-in" style={{ animationDelay: '0.2s' }}>
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Calendar className="h-6 w-6 text-primary" />
+                <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
+                  <Calendar className="h-6 w-6 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">8</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.pastEvents}</p>
                   <p className="text-sm text-muted-foreground">Past Events</p>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-6 hover:shadow-lg transition-shadow">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <BarChart3 className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">95%</p>
-                  <p className="text-sm text-muted-foreground">Success Rate</p>
                 </div>
               </div>
             </Card>

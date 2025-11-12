@@ -139,7 +139,7 @@ const Profile = () => {
         <header className="bg-gradient-to-r from-primary via-primary-dark to-primary text-primary-foreground p-6 lg:p-8 animate-fade-in">
           <div className="max-w-5xl mx-auto text-center space-y-4">
             <div className="w-24 h-24 rounded-full bg-gradient-to-br from-accent to-accent/80 mx-auto flex items-center justify-center text-4xl shadow-lg animate-scale-in">
-              {profile.role === "event_manager" ? "�" : "�👨‍🎓"}
+              {profile.role === "event_manager" ? "👨‍💼" : "👨‍🎓"}
             </div>
             <div className="animate-slide-up">
               <h1 className="text-xl font-bold">{profile.full_name || "User"}</h1>

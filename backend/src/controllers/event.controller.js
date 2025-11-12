@@ -73,6 +73,7 @@ export const getAllEvents = async (req, res) => {
 export const getEventById = async (req, res) => {
   try {
     const { id } = req.params;
+    const user_id = req.user?.user_id; // Optional - may not be logged in
 
     // Validate UUID format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -98,9 +99,36 @@ export const getEventById = async (req, res) => {
       });
     }
 
+    // Get registration count for this event
+    const { count: registeredCount, error: countError } = await supabaseAdmin
+      .from('registrations')
+      .select('*', { count: 'exact', head: true })
+      .eq('event_id', id);
+
+    if (countError) {
+      console.error('Error counting registrations:', countError);
+    }
+
+    // Check if current user is registered (if logged in)
+    let isRegistered = false;
+    if (user_id) {
+      const { data: registration } = await supabaseAdmin
+        .from('registrations')
+        .select('id')
+        .eq('event_id', id)
+        .eq('user_id', user_id)
+        .single();
+      
+      isRegistered = !!registration;
+    }
+
     return res.status(200).json({
       success: true,
-      data: event
+      data: {
+        ...event,
+        registered_count: registeredCount || 0,
+        is_registered: isRegistered
+      }
     });
 
   } catch (error) {

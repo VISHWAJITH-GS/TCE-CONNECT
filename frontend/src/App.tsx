@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import Home from "./pages/Home";
 import Events from "./pages/Events";
 import EventDetails from "./pages/EventDetails";
+import EventRegistrations from "./pages/EventRegistrations";
 import Community from "./pages/Community";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
@@ -71,6 +72,15 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <EventDetails />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/event/:id/registrations" 
+            element={
+              <ProtectedRoute requiredRole="event_manager">
+                <EventRegistrations />
               </ProtectedRoute>
             } 
           />

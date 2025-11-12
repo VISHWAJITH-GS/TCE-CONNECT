@@ -3,65 +3,49 @@ import { BottomNav } from "@/components/BottomNav";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, Trophy, ArrowRight } from "lucide-react";
+import { Calendar, Users, Trophy, ArrowRight, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
-const todaysEvents = [
-  {
-    id: "1",
-    title: "AI Sprint Workshop",
-    date: "Today, 10:00 AM",
-    venue: "CSE Department Lab",
-    department: "AI Consortium",
-    type: "technical" as const,
-  },
-  {
-    id: "14",
-    title: "Music Jam Session",
-    date: "Today, 3:00 PM",
-    venue: "Student Activity Center",
-    department: "Andhadhi - Music Club",
-    type: "cultural" as const,
-  },
-  {
-    id: "19",
-    title: "Inter-Department Football Match",
-    date: "Today, 4:30 PM",
-    venue: "TCE Sports Ground",
-    department: "Sports Committee",
-    type: "sports" as const,
-  },
-];
-
-const upcomingEvents = [
-  {
-    id: "2",
-    title: "Field Visit - AR/VR",
-    date: "Jun 13-14, 2025",
-    venue: "Industry Partner Location",
-    department: "AR/VR Club",
-    type: "technical" as const,
-  },
-  {
-    id: "3",
-    title: "Connexions - IoT Workshop",
-    date: "May 9, 2025",
-    venue: "IoT Lab Complex",
-    department: "IoT Club",
-    type: "technical" as const,
-  },
-  {
-    id: "12",
-    title: "Cultural Night 2025",
-    date: "Apr 10, 2025",
-    venue: "TCE Main Auditorium",
-    department: "Cultural Society",
-    type: "cultural" as const,
-  },
-];
+import { useState, useEffect } from "react";
+import { get, type Event } from "@/lib/api";
 
 const Home = () => {
   const navigate = useNavigate();
+  const [allEvents, setAllEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+      const response = await get<{ success: boolean; data: Event[] }>("/events");
+      if (response.success) {
+        setAllEvents(response.data || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch events:", error);
+      setAllEvents([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Separate today's and upcoming events
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const todaysEvents = allEvents.filter(event => {
+    const eventDate = new Date(event.date_time);
+    eventDate.setHours(0, 0, 0, 0);
+    return eventDate.getTime() === today.getTime();
+  });
+
+  const upcomingEvents = allEvents.filter(event => {
+    const eventDate = new Date(event.date_time);
+    return eventDate > today;
+  }).slice(0, 6); // Show first 6 upcoming events
   return (
     <div className="flex flex-col min-h-screen bg-background page-transition">
       <Navbar />
@@ -142,20 +126,44 @@ const Home = () => {
             <span className="w-1 h-6 bg-primary rounded-full animate-pulse"></span>
             <span className="gradient-text">Today's Events</span>
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {todaysEvents.map((event, index) => (
-              <div 
-                key={index}
-                className="animate-slide-up opacity-0"
-                style={{ 
-                  animationDelay: `${index * 0.1}s`,
-                  animationFillMode: 'forwards'
-                }}
-              >
-                <EventCard {...event} />
-              </div>
-            ))}
-          </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
+              <span className="text-muted-foreground">Loading events...</span>
+            </div>
+          ) : todaysEvents.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No events scheduled for today</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {todaysEvents.map((event, index) => (
+                <div 
+                  key={index}
+                  className="animate-slide-up opacity-0"
+                  style={{ 
+                    animationDelay: `${index * 0.1}s`,
+                    animationFillMode: 'forwards'
+                  }}
+                >
+                  <EventCard 
+                    id={event.event_id}
+                    title={event.event_name}
+                    date={new Date(event.date_time).toLocaleDateString('en-IN', {
+                      weekday: 'long',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                    venue={event.venue}
+                    department={event.department || 'TCE'}
+                    type={(event.category?.toLowerCase() as "technical" | "cultural" | "sports") || "technical"}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Upcoming Events with staggered animation */}
@@ -164,20 +172,44 @@ const Home = () => {
             <span className="w-1 h-6 bg-primary rounded-full"></span>
             Upcoming Events
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {upcomingEvents.map((event, index) => (
-              <div 
-                key={index}
-                className="animate-slide-up opacity-0"
-                style={{ 
-                  animationDelay: `${(index + 3) * 0.08}s`,
-                  animationFillMode: 'forwards'
-                }}
-              >
-                <EventCard {...event} />
-              </div>
-            ))}
-          </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
+              <span className="text-muted-foreground">Loading events...</span>
+            </div>
+          ) : upcomingEvents.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No upcoming events scheduled</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {upcomingEvents.map((event, index) => (
+                <div 
+                  key={index}
+                  className="animate-slide-up opacity-0"
+                  style={{ 
+                    animationDelay: `${(index + 3) * 0.08}s`,
+                    animationFillMode: 'forwards'
+                  }}
+                >
+                  <EventCard 
+                    id={event.event_id}
+                    title={event.event_name}
+                    date={new Date(event.date_time).toLocaleDateString('en-IN', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                    venue={event.venue}
+                    department={event.department || 'TCE'}
+                    type={(event.category?.toLowerCase() as "technical" | "cultural" | "sports") || "technical"}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </section>
         </div>
 

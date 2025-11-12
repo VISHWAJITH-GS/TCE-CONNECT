@@ -8,6 +8,12 @@ CREATE TABLE IF NOT EXISTS registrations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   event_id UUID NOT NULL REFERENCES events(event_id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES profiles(user_id) ON DELETE CASCADE,
+  full_name TEXT NOT NULL,
+  reg_number TEXT NOT NULL,
+  year TEXT NOT NULL,
+  department TEXT NOT NULL,
+  section TEXT NOT NULL,
+  phone TEXT NOT NULL,
   registered_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(event_id, user_id) -- Prevent duplicate registrations for the same event
 );

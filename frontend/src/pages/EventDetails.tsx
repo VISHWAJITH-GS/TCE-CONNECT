@@ -17,10 +17,13 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  FileText,
+  Zap
 } from "lucide-react";
 import { get, post, type Event } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { EventRegistration } from "@/components/EventRegistration";
 
 interface EventOrganizer {
   id: string;
@@ -30,6 +33,8 @@ interface EventOrganizer {
 
 interface EventDetails extends Event {
   event_organizers?: EventOrganizer[];
+  registered_count?: number;
+  is_registered?: boolean;
 }
 
 export default function EventDetails() {
@@ -39,12 +44,27 @@ export default function EventDetails() {
   const [event, setEvent] = useState<EventDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+  const [quickRegister, setQuickRegister] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
       fetchEventDetails();
+      fetchUserRole();
     }
   }, [id]);
+
+  const fetchUserRole = async () => {
+    try {
+      const response = await get<{ success: boolean; data: { role: string } }>("/profile");
+      if (response.success) {
+        setUserRole(response.data.role);
+      }
+    } catch (error) {
+      console.error("Failed to fetch user role:", error);
+    }
+  };
 
   const fetchEventDetails = async () => {
     try {
@@ -69,34 +89,69 @@ export default function EventDetails() {
   const handleRegister = async () => {
     if (!event) return;
 
-    // If there's a Google Form link, open it
-    if (event.gform_link) {
-      window.open(event.gform_link, '_blank');
+    // Check if event is full
+    const registeredCount = event.registered_count || 0;
+    const totalSeats = event.available_seats;
+    
+    if (registeredCount >= totalSeats) {
+      toast({
+        variant: "destructive",
+        title: "Event Full",
+        description: "Sorry, this event has reached maximum capacity",
+      });
       return;
     }
 
-    // Otherwise, register through the backend
-    setRegistering(true);
-    try {
-      const response = await post<{ success: boolean; message: string }>("/registrations", {
-        event_id: event.event_id
+    // Check if already registered
+    if (event.is_registered) {
+      toast({
+        title: "Already Registered",
+        description: "You are already registered for this event",
       });
+      return;
+    }
 
-      if (response.success) {
-        toast({
-          title: "Success!",
-          description: "Successfully registered for the event"
-        });
-      }
-    } catch (error: any) {
+    // Open registration modal
+    setShowRegistrationModal(true);
+  };
+
+  const handleQuickRegister = async () => {
+    if (!event) return;
+
+    // Check if event is full
+    const registeredCount = event.registered_count || 0;
+    const totalSeats = event.available_seats;
+    
+    if (registeredCount >= totalSeats) {
       toast({
         variant: "destructive",
-        title: "Registration Failed",
-        description: error.response?.data?.message || "Failed to register for event"
+        title: "Event Full",
+        description: "Sorry, this event has reached maximum capacity",
       });
-    } finally {
-      setRegistering(false);
+      return;
     }
+
+    // Check if already registered
+    if (event.is_registered) {
+      toast({
+        title: "Already Registered",
+        description: "You are already registered for this event",
+      });
+      return;
+    }
+
+    // Open registration modal in quick register mode
+    setQuickRegister(true);
+    setShowRegistrationModal(true);
+  };
+
+  const handleRegistrationSuccess = () => {
+    // Refresh event details to get updated registration status
+    fetchEventDetails();
+  };
+
+  const handleViewRegistrations = () => {
+    navigate(`/event/${id}/registrations`);
   };
 
   if (loading) {
@@ -165,31 +220,48 @@ export default function EventDetails() {
                   {isPastEvent && (
                     <Badge variant="destructive">Past Event</Badge>
                   )}
+                  {event.is_registered && (
+                    <Badge className="bg-green-600">Registered ✓</Badge>
+                  )}
                 </div>
               </div>
               
-              {!isPastEvent && (
-                <Button 
-                  onClick={handleRegister}
-                  disabled={registering}
-                  size="lg"
-                  className="w-full md:w-auto"
-                >
-                  {registering ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Registering...
-                    </>
-                  ) : event.gform_link ? (
-                    <>
-                      Register Now
-                      <ExternalLink className="ml-2 h-4 w-4" />
-                    </>
-                  ) : (
-                    "Register Now"
-                  )}
-                </Button>
-              )}
+              <div className="flex flex-col gap-2 w-full md:w-auto">
+                {userRole === "event_manager" && (
+                  <Button 
+                    onClick={handleViewRegistrations}
+                    variant="outline"
+                    size="lg"
+                    className="w-full md:w-auto"
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    View Registrations
+                  </Button>
+                )}
+                
+                {!isPastEvent && userRole !== "event_manager" && (
+                  <Button 
+                    onClick={handleQuickRegister}
+                    disabled={event.is_registered || (event.registered_count || 0) >= event.available_seats}
+                    size="lg"
+                    className="w-full md:w-auto bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                  >
+                    {event.is_registered ? (
+                      <>
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                        Already Registered
+                      </>
+                    ) : (event.registered_count || 0) >= event.available_seats ? (
+                      "Event Full"
+                    ) : (
+                      <>
+                        <Zap className="mr-2 h-4 w-4" />
+                        Quick Register
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -236,7 +308,16 @@ export default function EventDetails() {
                     <Users className="h-5 w-5 text-primary mt-0.5" />
                     <div>
                       <p className="font-medium">Capacity</p>
-                      <p className="text-muted-foreground">{event.available_seats} participants</p>
+                      <p className="text-muted-foreground">
+                        {event.registered_count || 0} / {event.available_seats} registered
+                      </p>
+                      {(event.registered_count || 0) >= event.available_seats ? (
+                        <Badge variant="destructive" className="mt-1">Event Full</Badge>
+                      ) : (
+                        <Badge variant="secondary" className="mt-1">
+                          {event.available_seats - (event.registered_count || 0)} spots left
+                        </Badge>
+                      )}
                     </div>
                   </div>
 
@@ -327,31 +408,63 @@ export default function EventDetails() {
               )}
 
               {/* Quick Actions */}
-              {!isPastEvent && (
-                <Card className="p-6 bg-primary/5">
-                  <h2 className="text-lg font-semibold mb-4">Register Now</h2>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Don't miss out on this exciting event. Register now to secure your spot!
-                  </p>
-                  <Button 
-                    onClick={handleRegister}
-                    disabled={registering}
-                    className="w-full"
-                  >
-                    {registering ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Registering...
-                      </>
-                    ) : event.gform_link ? (
-                      <>
-                        Register via Form
-                        <ExternalLink className="ml-2 h-4 w-4" />
-                      </>
-                    ) : (
-                      "Register Now"
-                    )}
-                  </Button>
+              {!isPastEvent && userRole !== "event_manager" && (
+                <Card className="p-6 bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20">
+                  <h2 className="text-lg font-semibold mb-4">Registration Options</h2>
+                  
+                  {(event.registered_count || 0) >= event.available_seats ? (
+                    <Button disabled className="w-full mb-3" size="lg">
+                      Event Full
+                    </Button>
+                  ) : event.is_registered ? (
+                    <Button disabled className="w-full mb-3" size="lg">
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      Already Registered
+                    </Button>
+                  ) : (
+                    <>
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Quick Registration</p>
+                          <Button 
+                            onClick={handleQuickRegister}
+                            className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white font-medium"
+                            size="lg"
+                          >
+                            <Zap className="mr-2 h-4 w-4" />
+                            Auto-Fill & Register
+                          </Button>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Uses your profile information to register instantly
+                          </p>
+                        </div>
+
+                        <div className="relative">
+                          <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-primary/20"></div>
+                          </div>
+                          <div className="relative flex justify-center text-xs">
+                            <span className="px-2 bg-gradient-to-br from-primary/10 to-accent/10 text-muted-foreground">or</span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Manual Registration</p>
+                          <Button 
+                            onClick={handleRegister}
+                            variant="outline"
+                            className="w-full border-2 border-primary/40 hover:border-primary hover:bg-primary/5 font-medium"
+                            size="lg"
+                          >
+                            Fill Details & Register
+                          </Button>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Review and edit your information before registering
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </Card>
               )}
             </div>
@@ -360,6 +473,21 @@ export default function EventDetails() {
       </div>
 
       <Footer />
+      
+      {/* Registration Modal */}
+      {event && (
+        <EventRegistration
+          eventId={event.event_id}
+          eventName={event.event_name}
+          open={showRegistrationModal}
+          onOpenChange={(open) => {
+            setShowRegistrationModal(open);
+            if (!open) setQuickRegister(false);
+          }}
+          onSuccess={handleRegistrationSuccess}
+          quickRegister={quickRegister}
+        />
+      )}
     </div>
   );
 }

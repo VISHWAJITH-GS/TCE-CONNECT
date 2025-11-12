@@ -146,7 +146,7 @@ export const registerUser = async (req, res) => {
     const userId = authData.user.id;
     console.log('✅ User created with ID:', userId);
 
-    // ✅ Step 4: Check if profile already exists with this user_id (race condition check)
+    // ✅ Step 4: Check if profile already exists with this user_id (auto-created by Supabase)
     console.log('Checking if profile already exists for user_id:', userId);
     const { data: existingUserProfile, error: userProfileCheckError } = await supabaseAdmin
       .from('profiles')
@@ -160,59 +160,86 @@ export const registerUser = async (req, res) => {
       error: userProfileCheckError 
     });
 
+    let profileData;
+    let profileError;
+
     if (existingUserProfile) {
-      console.log('❌ Profile already exists for this user_id:', userId);
-      console.log('Existing profile email:', existingUserProfile.email);
-      console.log('This is likely from a previous failed attempt. Deleting the newly created auth user:', userId);
-      await supabaseAdmin.auth.admin.deleteUser(userId);
-      return res.status(400).json({
-        success: false,
-        message: "An account with this email already exists. Please login or contact support if you're having issues."
-      });
-    }
-
-    console.log('✅ No existing profile found, proceeding with profile creation');
-
-    // ✅ Step 5: Insert profile row in profiles table
-    console.log('Creating profile in database...');
-    const { data: profileData, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .insert({
-        user_id: userId,
-        email,
-        full_name: full_name || null,
-        reg_number: reg_number || null,
-        department: department || null,
-        year: year || null,
-        phone_number: phone_number || null,
-        role
-      })
-      .select()
-      .single();
-
-    if (profileError) {
-      // ✅ Rollback: Delete the auth user if profile creation fails to avoid ghost accounts
-      console.error('❌ Profile creation failed, rolling back user:', profileError);
-      await supabaseAdmin.auth.admin.deleteUser(userId);
+      // Profile already exists (auto-created by Supabase), so update it with additional info
+      console.log('✅ Profile already exists (auto-created by Supabase), updating with user details...');
       
-      // Check if it's a duplicate key error
-      if (profileError.code === '23505') {
-        return res.status(400).json({
+      const { data: updatedProfile, error: updateError } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          full_name: full_name || null,
+          reg_number: reg_number || null,
+          department: department || null,
+          year: year || null,
+          phone_number: phone_number || null,
+          role
+        })
+        .eq('user_id', userId)
+        .select()
+        .single();
+
+      profileData = updatedProfile;
+      profileError = updateError;
+      
+      if (updateError) {
+        console.error('❌ Profile update failed:', updateError);
+        // Delete the auth user if profile update fails
+        await supabaseAdmin.auth.admin.deleteUser(userId);
+        return res.status(500).json({
           success: false,
-          message: "Email already registered. Please login or use a different email."
+          message: "Failed to update user profile",
+          error: updateError.message
         });
       }
       
-      return res.status(500).json({
-        success: false,
-        message: "Failed to create user profile",
-        error: profileError.message
-      });
+      console.log('✅ Profile updated successfully');
+    } else {
+      // No existing profile, create one
+      console.log('✅ No existing profile found, creating profile...');
+      
+      const { data: newProfile, error: insertError } = await supabaseAdmin
+        .from('profiles')
+        .insert({
+          user_id: userId,
+          email,
+          full_name: full_name || null,
+          reg_number: reg_number || null,
+          department: department || null,
+          year: year || null,
+          phone_number: phone_number || null,
+          role
+        })
+        .select()
+        .single();
+
+      profileData = newProfile;
+      profileError = insertError;
+      
+      if (profileError) {
+        console.error('❌ Profile creation failed, rolling back user:', profileError);
+        // Delete the auth user if profile creation fails to avoid ghost accounts
+        await supabaseAdmin.auth.admin.deleteUser(userId);
+        
+        // Check if it's a duplicate key error
+        if (profileError.code === '23505') {
+          return res.status(400).json({
+            success: false,
+            message: "Email already registered. Please login or use a different email."
+          });
+        }
+        
+        return res.status(500).json({
+          success: false,
+          message: "Failed to create user profile",
+          error: profileError.message
+        });
+      }
+      
+      console.log('✅ Profile created successfully');
     }
-
-    console.log('✅ Profile created successfully');
-
-    console.log('✅ Profile created successfully');
 
     // ✅ Step 6: Generate JWT token (same as login)
     const token = jwt.sign(
