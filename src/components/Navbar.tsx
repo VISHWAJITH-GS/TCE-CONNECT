@@ -36,10 +36,13 @@ export const Navbar = () => {
       
       if (authStatus) {
         try {
-          const profile = await get<Profile>("/profile");
-          setUserProfile(profile);
-        } catch (error) {
-          console.error("Failed to fetch profile:", error);
+          const response = await get<{ success: boolean; data: Profile }>("/profile");
+          setUserProfile(response.data);
+        } catch (error: any) {
+          // Only log if it's not a 404 (missing profile is expected for some users)
+          if (error?.response?.status !== 404) {
+            console.error("Failed to fetch profile:", error);
+          }
           // If profile fetch fails, don't auto-logout (token might still be valid)
         }
       }

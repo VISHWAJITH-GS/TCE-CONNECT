@@ -15,6 +15,7 @@ import authRoutes from "./routes/auth.routes.js";
 import eventRoutes from "./routes/event.routes.js";
 import registrationRoutes from "./routes/registration.routes.js";
 import profileRoutes from "./routes/profile.routes.js";
+import clubRoutes from "./routes/club.routes.js";
 
 // Create Express app
 const app = express();
@@ -22,9 +23,19 @@ const app = express();
 // Security middleware
 app.use(helmet());
 
-// CORS configuration
+// CORS configuration - support multiple origins
+const corsOrigins = env.corsOrigin.split(',').map(origin => origin.trim());
 app.use(cors({
-  origin: env.corsOrigin,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (corsOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 
@@ -58,6 +69,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/registrations', registrationRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/clubs', clubRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -71,6 +83,7 @@ app.get('/', (req, res) => {
       events: '/api/events',
       registrations: '/api/registrations',
       profile: '/api/profile',
+      clubs: '/api/clubs',
     },
   });
 });

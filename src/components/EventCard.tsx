@@ -34,6 +34,9 @@ export const EventCard = ({
     navigate(`/events/${id}`);
   };
 
+  // Default to 'technical' if type is undefined/null
+  const eventType = type || 'technical';
+
   const typeColors = {
     technical: "bg-primary/10 text-primary border-primary/30",
     cultural: "bg-purple-500/10 text-purple-700 border-purple-200",
@@ -55,10 +58,10 @@ export const EventCard = ({
         <div className="space-y-3">
           <div className={cn(
             "inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium",
-            typeColors[type]
+            typeColors[eventType]
           )}>
             <span className="w-2 h-2 rounded-full bg-current animate-pulse"></span>
-            {type.charAt(0).toUpperCase() + type.slice(1)}
+            {eventType.charAt(0).toUpperCase() + eventType.slice(1)}
           </div>
           <h3 className="font-semibold text-base group-hover:text-primary transition-colors leading-tight">
             {title}
@@ -96,7 +99,7 @@ export const EventCard = ({
       )}
       onClick={handleCardClick}
     >
-      <div className={cn("h-2 bg-gradient-to-r", typeGradients[type])}></div>
+      <div className={cn("h-2 bg-gradient-to-r", typeGradients[eventType])}></div>
       <div className="p-5 space-y-4 flex-1 flex flex-col">
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-semibold text-base group-hover:text-primary transition-colors leading-tight line-clamp-2 min-h-[3rem]">
@@ -105,10 +108,10 @@ export const EventCard = ({
           <span
             className={cn(
               "text-xs px-2 py-1 rounded-full border font-medium whitespace-nowrap shrink-0",
-              typeColors[type]
+              typeColors[eventType]
             )}
           >
-            {type.charAt(0).toUpperCase() + type.slice(1)}
+            {eventType.charAt(0).toUpperCase() + eventType.slice(1)}
           </span>
         </div>
 

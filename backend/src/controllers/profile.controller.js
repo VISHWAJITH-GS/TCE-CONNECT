@@ -3,7 +3,7 @@
  * Handles user profile operations
  */
 
-import { supabase } from '../config/supabase.js';
+import { supabase, supabaseAdmin } from '../config/supabase.js';
 
 /**
  * Get logged-in user profile
@@ -14,8 +14,8 @@ export const getProfile = async (req, res) => {
   try {
     const user_id = req.user.user_id;
 
-    // Fetch user profile
-    const { data: profile, error } = await supabase
+    // Fetch user profile using supabaseAdmin to bypass RLS
+    const { data: profile, error } = await supabaseAdmin
       .from('profiles')
       .select('user_id, email, full_name, reg_number, department, year, phone_number, role')
       .eq('user_id', user_id)
@@ -31,7 +31,7 @@ export const getProfile = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      profile
+      data: profile // Changed from 'profile' to 'data' for consistency
     });
 
   } catch (error) {
@@ -79,8 +79,8 @@ export const updateProfile = async (req, res) => {
     }
     if (phone_number !== undefined) updateData.phone_number = phone_number;
 
-    // Update profile
-    const { error: updateError } = await supabase
+    // Update profile using supabaseAdmin to bypass RLS
+    const { error: updateError } = await supabaseAdmin
       .from('profiles')
       .update(updateData)
       .eq('user_id', user_id);

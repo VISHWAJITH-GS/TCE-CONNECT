@@ -3,7 +3,7 @@
  * Handles event registration operations
  */
 
-import { supabase } from '../config/supabase.js';
+import { supabaseAdmin } from '../config/supabase.js';
 
 /**
  * Register for an event
@@ -26,7 +26,7 @@ export const registerForEvent = async (req, res) => {
     }
 
     // Check if event exists and get details
-    const { data: event, error: eventError } = await supabase
+    const { data: event, error: eventError } = await supabaseAdmin
       .from('events')
       .select('event_id, event_name, available_seats, gform_link, manager_id')
       .eq('event_id', event_id)
@@ -50,7 +50,7 @@ export const registerForEvent = async (req, res) => {
     }
 
     // Check if user is already registered
-    const { data: existingRegistration, error: checkError } = await supabase
+    const { data: existingRegistration, error: checkError } = await supabaseAdmin
       .from('registrations')
       .select('id')
       .eq('event_id', event_id)
@@ -66,7 +66,7 @@ export const registerForEvent = async (req, res) => {
     }
 
     // Insert registration
-    const { data: registration, error: insertError } = await supabase
+    const { data: registration, error: insertError } = await supabaseAdmin
       .from('registrations')
       .insert([{
         event_id,
@@ -84,14 +84,14 @@ export const registerForEvent = async (req, res) => {
     }
 
     // Decrease available_seats by 1
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('events')
       .update({ available_seats: event.available_seats - 1 })
       .eq('event_id', event_id);
 
     if (updateError) {
       // Rollback: delete the registration if seat update fails
-      await supabase
+      await supabaseAdmin
         .from('registrations')
         .delete()
         .eq('id', registration.id);
@@ -128,8 +128,10 @@ export const getMyRegistrations = async (req, res) => {
   try {
     const user_id = req.user.user_id;
 
+    console.log('📋 Fetching registrations for user:', user_id);
+
     // Fetch registrations with full event details
-    const { data: registrations, error } = await supabase
+    const { data: registrations, error } = await supabaseAdmin
       .from('registrations')
       .select(`
         id,
@@ -145,8 +147,6 @@ export const getMyRegistrations = async (req, res) => {
           requirements,
           available_seats,
           registration_fee,
-          category,
-          department,
           gform_link
         )
       `)
@@ -154,12 +154,15 @@ export const getMyRegistrations = async (req, res) => {
       .order('registered_at', { ascending: false });
 
     if (error) {
+      console.error('❌ Error fetching registrations:', error);
       return res.status(400).json({
         success: false,
         message: 'Failed to fetch registrations',
         error: error.message
       });
     }
+
+    console.log(`✅ Found ${registrations?.length || 0} registrations`);
 
     // Transform data to flatten event details
     const formattedRegistrations = registrations.map(reg => ({
@@ -174,8 +177,6 @@ export const getMyRegistrations = async (req, res) => {
       requirements: reg.events?.requirements,
       available_seats: reg.events?.available_seats,
       registration_fee: reg.events?.registration_fee,
-      category: reg.events?.category,
-      department: reg.events?.department,
       gform_link: reg.events?.gform_link
     }));
 
@@ -222,7 +223,7 @@ export const getEventRegistrations = async (req, res) => {
     }
 
     // Check if event exists and verify ownership
-    const { data: event, error: eventError } = await supabase
+    const { data: event, error: eventError } = await supabaseAdmin
       .from('events')
       .select('event_id, event_name, manager_id')
       .eq('event_id', event_id)
@@ -246,7 +247,7 @@ export const getEventRegistrations = async (req, res) => {
     }
 
     // Fetch registrations with student details
-    const { data: registrations, error: regError } = await supabase
+    const { data: registrations, error: regError } = await supabaseAdmin
       .from('registrations')
       .select(`
         id,

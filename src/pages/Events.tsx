@@ -135,7 +135,7 @@ const Events = () => {
                     })}
                     venue={event.venue}
                     department={event.department || 'TCE'}
-                    type={event.category as 'technical' | 'cultural' | 'sports'}
+                    type={(event.category as 'technical' | 'cultural' | 'sports') || 'technical'}
                   />
                 </div>
               ))}
